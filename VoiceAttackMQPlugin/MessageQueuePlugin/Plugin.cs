@@ -36,7 +36,7 @@ namespace MessageQueuePlugin.ServiceInterface
     /// </summary>
     public class VoiceAttackMQServices : Service
     {
-        public QueueCommandResponse Get(QueueCommandRequest request)
+        public QueueCommandResponse Any(QueueCommandRequest request)
         {
             using (var mqClient = TryResolve<IMessageService>().CreateMessageQueueClient())
             {

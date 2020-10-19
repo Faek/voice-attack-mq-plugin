@@ -1,5 +1,5 @@
 ﻿config:apiPort 55569
 rabbitmq:enable false
-# rabbitmq:connectionString 
+# rabbitmq:connectionString localhost:5672
 # rabbitmq:userName
 # rabbitmq:passWord

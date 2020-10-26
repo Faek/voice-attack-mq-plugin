@@ -1,6 +1,5 @@
-﻿config:apiPort 55569
+﻿config:listeners http://localhost:55569/,http://127.0.0.1:55569/
 rabbitmq:enable false
-config:listeners http://localhost:55569/,http://127.0.0.1:55569/
 # rabbitmq:connectionString localhost:5672
 # rabbitmq:userName
 # rabbitmq:passWord

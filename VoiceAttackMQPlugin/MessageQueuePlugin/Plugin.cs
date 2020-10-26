@@ -14,7 +14,6 @@ namespace MessageQueuePlugin.ServiceModel
     public class VAExecCommand
     {
         public string CommandName { get; set; }
-
     }
 
     public class QueueCommandRequest
@@ -90,7 +89,7 @@ namespace MessageQueuePlugin
     {
 
         const string C_APP_NAME = "Lerk's VoiceAttack MessageQueue Plugin";
-        const string C_APP_VERSION = "v0.1";
+        const string C_APP_VERSION = "v0.2";
 
         public static ILog Logger = LogManager.GetLogger(typeof(VoiceAttackPlugin));
         static AppHost _appHost = null;
@@ -120,8 +119,8 @@ namespace MessageQueuePlugin
             _appHost = new AppHost();
             _appHost.Init();
 
-            var webServicePort = _appHost.AppSettings.Get("config:apiPort", 55569);
-            _appHost.Start($"http://localhost:{webServicePort}/");
+            var listeners = _appHost.AppSettings.Get<List<string>>("config:listeners");
+            _appHost.Start(listeners);
 
             var mqServer = _appHost.Container.Resolve<IMessageService>();
 
@@ -135,14 +134,8 @@ namespace MessageQueuePlugin
                     return null;
                 }
 
-                //do not run the command if it's already running
-                if (vaProxy.Command.Active(request.CommandName))
-                {
-                    return null;
-                }
-
-                //setStatus(vaProxy, VAMQStatus.Operational);
-                //execute command
+                //execute command. if you don't want it to execute the same command twice
+                //you should set that up in the command advanced options
                 vaProxy.Command.Execute(request.CommandName);
                 return null;
 

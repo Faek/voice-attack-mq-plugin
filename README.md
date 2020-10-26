@@ -5,6 +5,8 @@ Allows voice attack to trigger commands from an api and/or message queue
 # How to use
 Download release ZIP, unzip directly into your VoiceAttack folder, in the Apps directory. For example: C:\Program Files (x86)\VoiceAttack\Apps\
 
+After launching VoiceAttack, Call any command by posting or doing a get request at http://localhost:55569/json/reply/QueueCommandRequest?CommandName={your-command-name-here}
+
 # Configuration
 Check the configuration file to change what port your api runs on, or whether or not to use RabbitMQ, and change rabbitmq connection string options
 

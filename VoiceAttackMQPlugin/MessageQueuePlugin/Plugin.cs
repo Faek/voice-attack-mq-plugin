@@ -11,14 +11,55 @@ using System.Collections.Generic;
 
 namespace MessageQueuePlugin.ServiceModel
 {
-    public class VAExecCommand
+
+    public class VASmallIntVariable
     {
-        public string CommandName { get; set; }
+        public string Name { get; set; }
+        public short? Value { get; set; }
     }
 
+    public class VAIntVariable
+    {
+        public string Name { get; set; }
+        public int? Value { get; set; }
+    }
+
+    public class VATextVariable
+    {
+        public string Name { get; set; }
+        public string Value { get; set; }
+    }
+
+    public class VADecimalVariable
+    {
+        public string Name { get; set; }
+        public decimal? Value { get; set; }
+    }
+
+    public class VABooleanVariable
+    {
+        public string Name { get; set; }
+        public bool? Value { get; set; }
+    }
+
+    public class VADateVariable
+    {
+        public string Name { get; set; }
+        public DateTime? Value { get; set; }
+    }
+
+    //we are reusing the command request object 
+    //as the message queue request object
+    //because they are identical
     public class QueueCommandRequest
     {
         public string CommandName { get; set; }
+        public List<VASmallIntVariable> SmallInts { get; set; }
+        public List<VAIntVariable> Ints { get; set; }
+        public List<VADecimalVariable> Decimals { get; set; }
+        public List<VATextVariable> Strings { get; set; }
+        public List<VABooleanVariable> Booleans { get; set; }
+        public List<VADateVariable> Dates { get; set; }
     }
 
     public class QueueCommandResponse
@@ -39,7 +80,7 @@ namespace MessageQueuePlugin.ServiceInterface
         {
             using (var mqClient = TryResolve<IMessageService>().CreateMessageQueueClient())
             {
-                mqClient.Publish(new VAExecCommand { CommandName = request.CommandName });
+                mqClient.Publish(request);
             }
 
             return new QueueCommandResponse()
@@ -89,7 +130,7 @@ namespace MessageQueuePlugin
     {
 
         const string C_APP_NAME = "Lerk's VoiceAttack MessageQueue Plugin";
-        const string C_APP_VERSION = "v0.2";
+        const string C_APP_VERSION = "v0.3";
 
         public static ILog Logger = LogManager.GetLogger(typeof(VoiceAttackPlugin));
         static AppHost _appHost = null;
@@ -124,9 +165,19 @@ namespace MessageQueuePlugin
 
             var mqServer = _appHost.Container.Resolve<IMessageService>();
 
-            mqServer.RegisterHandler<VAExecCommand>(m =>
+            //wire handler for receiving a message from the message queue
+            mqServer.RegisterHandler<QueueCommandRequest>(m =>
             {
-                VAExecCommand request = m.GetBody();
+                QueueCommandRequest request = m.GetBody();
+
+                //loop thru all of the variables of each data type
+                //and store them inside of voice attack
+                request.SmallInts?.Each(v => vaProxy.SetSmallInt(v.Name, v.Value));
+                request.Ints?.Each(v => vaProxy.SetInt(v.Name, v.Value));
+                request.Strings?.Each(v => vaProxy.SetText(v.Name, v.Value));
+                request.Decimals?.Each(v => vaProxy.SetDecimal(v.Name, v.Value));
+                request.Booleans?.Each(v => vaProxy.SetBoolean(v.Name, v.Value));
+                request.Dates?.Each(v => vaProxy.SetDate(v.Name, v.Value));
 
                 //do not run the command if it does not exist
                 if (!vaProxy.Command.Exists(request.CommandName))
@@ -140,6 +191,7 @@ namespace MessageQueuePlugin
                 return null;
 
             });
+
             mqServer.Start();
         }
 

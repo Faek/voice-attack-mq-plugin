@@ -1,11 +1,25 @@
-# Lerk's Voice Attack API Plugin
-Allows voice attack to trigger commands from an api and/or message queue
+# Lerk's Voice Attack HTTP Plugin
+Allows voice attack to trigger commands from an http get (or any other VERB) and/or rabbit message queue
 
 
 # How to use
 Download release ZIP, unzip directly into your VoiceAttack folder, in the Apps directory. For example: C:\Program Files (x86)\VoiceAttack\Apps\
 
 After launching VoiceAttack, Call any command by posting or doing a get request at http://localhost:55569/json/reply/QueueCommandRequest?CommandName={your-command-name-here}
+
+# Alerts Queue
+
+There is also now a separate queue for alerts that you can put a pause after (streamelements has a 10 second delay by default)
+
+You can add an alert to the alert queue by hitting this URL:  http://localhost:55569/json/reply/AlertQueueRequest?CommandName={your-alert-command-name-here}&Pause=10000&User={TwitchSubscriber}
+
+Supported request params for AlertQueueRequest: User, Gifter, Amount, Pause
+
+This will execute the command specified, and set variables in VoiceAttack that correspond to each of those properties.
+
+ -  User : {TXT:TwitchAlertUser}
+ -  Gifter : {TXT:TwitchAlertGifter}
+ -  Amount: {DEC:TwitchAlertAmount}
 
 # Configuration File
 This plugin works out of the box with 0 configuration, however there are a few options in the config file.

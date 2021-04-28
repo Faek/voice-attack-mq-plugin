@@ -7,6 +7,8 @@ Download release ZIP, unzip directly into your VoiceAttack folder, in the Apps d
 
 After launching VoiceAttack, Call any command by posting or doing a get request at http://localhost:55569/json/reply/QueueCommandRequest?CommandName={your-command-name-here}
 
+You can also set voiceattack variables by using the SmallInts, Ints, Decimals, Strings, Booleans, and Dates request variables. This will set a voiceattack variable with the name and value you specify. Example: http://localhost:55569/json/reply/QueueCommandRequest?CommandName={your-command-name-here}&SmallInts={Name:UserCount,Value:25}
+
 # Alerts Queue
 
 There is also now a separate queue for alerts that you can put a pause after (streamelements has a 10 second delay by default)
@@ -20,6 +22,10 @@ This will execute the command specified, and set variables in VoiceAttack that c
  -  User : {TXT:TwitchAlertUser}
  -  Gifter : {TXT:TwitchAlertGifter}
  -  Amount: {DEC:TwitchAlertAmount}
+
+# Browsing the API
+
+Visit http://localhost:55569/metadata to browse the API endpoint definitions
 
 # Configuration File
 This plugin works out of the box with 0 configuration, however there are a few options in the config file.

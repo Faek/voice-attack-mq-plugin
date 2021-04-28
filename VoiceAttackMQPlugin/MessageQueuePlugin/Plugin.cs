@@ -67,6 +67,34 @@ namespace MessageQueuePlugin.ServiceModel
         public Result Result { get; set; }
         public ResponseStatus ResponseStatus { get; set; }
     }
+
+    public enum AlertType
+    {
+        Follower,
+        Sub,
+        Gift,
+        MassGift,
+        Bits,
+        Donation
+    }
+
+    public class AlertQueueRequest
+    {
+        public AlertType Type { get; set; }
+        public string CommandName { get; set; }
+        public string User { get; set; }
+        public string Gifter { get; set; }
+        public decimal? Amount { get; set; }
+        public int? Pause { get; set; }
+    }
+
+
+    public class AlertQueueResponse
+    {
+        public Result Result { get; set; }
+        public ResponseStatus ResponseStatus { get; set; }
+    }
+
 }
 
 namespace MessageQueuePlugin.ServiceInterface
@@ -78,12 +106,25 @@ namespace MessageQueuePlugin.ServiceInterface
     {
         public QueueCommandResponse Any(QueueCommandRequest request)
         {
-            using (var mqClient = TryResolve<IMessageService>().CreateMessageQueueClient())
+            using (var mqClient = TryResolve<ICommandQueueService>().CreateMessageQueueClient())
             {
                 mqClient.Publish(request);
             }
 
             return new QueueCommandResponse()
+            {
+                Result = Result.Success()
+            };
+        }
+
+        public AlertQueueResponse Any(AlertQueueRequest request)
+        {
+            using (var mqClient = TryResolve<IAlertQueueService>().CreateMessageQueueClient())
+            {
+                mqClient.Publish(request);
+            }
+
+            return new AlertQueueResponse()
             {
                 Result = Result.Success()
             };
@@ -94,6 +135,40 @@ namespace MessageQueuePlugin.ServiceInterface
 
 namespace MessageQueuePlugin
 {
+
+    public interface ICommandQueueService : IMessageService
+    {
+
+    }
+
+    public class CommandQueueService : BackgroundMqService, ICommandQueueService
+    {
+
+    }
+
+    public class RabbitCommandQueueService : RabbitMqServer, ICommandQueueService
+    {
+        public RabbitCommandQueueService(string connectionString = "localhost", string username = null, string password = null) : base(connectionString, username, password)
+        {
+        }
+    }
+
+    public interface IAlertQueueService : IMessageService
+    {
+
+    }
+
+    public class AlertQueueService : BackgroundMqService, IAlertQueueService
+    {
+
+    }
+
+    public class RabbitAlertQueueService : RabbitMqServer, IAlertQueueService
+    {
+        public RabbitAlertQueueService(string connectionString = "localhost", string username = null, string password = null) : base(connectionString, username, password)
+        {
+        }
+    }
 
     public class AppHost : AppSelfHostBase
     {
@@ -115,11 +190,17 @@ namespace MessageQueuePlugin
                 var rabbitMqConnectionString = AppSettings.Get("rabbitmq:connectionString", "localhost:5672");
                 var rabbitMqUserName = AppSettings.Get<string>("rabbitmq:userName", null);
                 var rabbitMqPassword = AppSettings.Get<string>("rabbitmq:passWord", null);
-                container.Register<IMessageService>(c => new RabbitMqServer(rabbitMqConnectionString, rabbitMqUserName, rabbitMqPassword));
+                container.Register<ICommandQueueService>(c => new RabbitCommandQueueService(rabbitMqConnectionString, rabbitMqUserName, rabbitMqPassword));
+
+                var rabbitMqAlertConnectionString = AppSettings.Get("rabbitmqalert:connectionString", "localhost:5673");
+                var rabbitMqAlertUserName = AppSettings.Get<string>("rabbitmqalert:userName", null);
+                var rabbitMqAlertPassword = AppSettings.Get<string>("rabbitmqalert:passWord", null);
+                container.Register<IAlertQueueService>(c => new RabbitAlertQueueService(rabbitMqAlertConnectionString, rabbitMqAlertUserName, rabbitMqAlertPassword));
             } 
             else
             {
-                container.Register<IMessageService>(c => new BackgroundMqService());
+                container.Register<ICommandQueueService>(c => new CommandQueueService());
+                container.Register<IAlertQueueService>(c => new AlertQueueService());
             }
 
         }
@@ -129,8 +210,8 @@ namespace MessageQueuePlugin
     public class VoiceAttackPlugin
     {
 
-        const string C_APP_NAME = "Lerk's VoiceAttack MessageQueue Plugin";
-        const string C_APP_VERSION = "v0.3";
+        const string C_APP_NAME = "Lerk's VoiceAttack HTTP Plugin";
+        const string C_APP_VERSION = "v0.4";
 
         public static ILog Logger = LogManager.GetLogger(typeof(VoiceAttackPlugin));
         static AppHost _appHost = null;
@@ -142,7 +223,7 @@ namespace MessageQueuePlugin
 
         public static string VA_DisplayInfo()
         {
-            return $"{C_APP_NAME} allows VoiceAttack to trigger commands by consuming messages from a message queue";  
+            return $"{C_APP_NAME} allows VoiceAttack to trigger commands by HTTP (Any Verb)";  
         }
 
         public static Guid VA_Id()
@@ -163,10 +244,10 @@ namespace MessageQueuePlugin
             var listeners = _appHost.AppSettings.Get<List<string>>("config:listeners");
             _appHost.Start(listeners);
 
-            var mqServer = _appHost.Container.Resolve<IMessageService>();
+            var commandQueueService = _appHost.Container.Resolve<ICommandQueueService>();
 
             //wire handler for receiving a message from the message queue
-            mqServer.RegisterHandler<QueueCommandRequest>(m =>
+            commandQueueService.RegisterHandler<QueueCommandRequest>(m =>
             {
                 QueueCommandRequest request = m.GetBody();
 
@@ -181,18 +262,52 @@ namespace MessageQueuePlugin
 
                 //do not run the command if it does not exist
                 if (!vaProxy.Command.Exists(request.CommandName))
-                {
                     return null;
-                }
-
+                
                 //execute command. if you don't want it to execute the same command twice
                 //you should set that up in the command advanced options
                 vaProxy.Command.Execute(request.CommandName);
+
                 return null;
 
             });
 
-            mqServer.Start();
+            commandQueueService.Start();
+
+
+            var alertQueueService = _appHost.Container.Resolve<IAlertQueueService>();
+
+            //wire handler for receiving a message from the message queue
+            alertQueueService.RegisterHandler<AlertQueueRequest>(m =>
+            {
+                AlertQueueRequest request = m.GetBody();
+
+                //do not run the command if it does not exist
+                if (!vaProxy.Command.Exists(request.CommandName))
+                    return null;
+
+                if (!string.IsNullOrWhiteSpace(request.User))
+                    vaProxy.SetText("TwitchAlertUser", request.User);
+
+                if (!string.IsNullOrWhiteSpace(request.Gifter))
+                    vaProxy.SetText("TwitchAlertGifter", request.Gifter);
+
+                if (request.Amount.HasValue)
+                    vaProxy.SetDecimal("TwitchAlertAmount", request.User);
+
+                //execute command. if you don't want it to execute the same command twice
+                //you should set that up in the command advanced options
+                vaProxy.Command.Execute(request.CommandName);
+
+                if (request.Pause.HasValue)
+                    System.Threading.Thread.Sleep(request.Pause.Value);
+
+                return null;
+
+            });
+
+            alertQueueService.Start();
+
         }
 
 

@@ -293,7 +293,7 @@ namespace MessageQueuePlugin
                     vaProxy.SetText("TwitchAlertGifter", request.Gifter);
 
                 if (request.Amount.HasValue)
-                    vaProxy.SetDecimal("TwitchAlertAmount", request.User);
+                    vaProxy.SetDecimal("TwitchAlertAmount", request.Amount.Value);
 
                 //execute command. if you don't want it to execute the same command twice
                 //you should set that up in the command advanced options
